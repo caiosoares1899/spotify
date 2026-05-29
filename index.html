@@ -147,7 +147,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="position:fixed;bottom:0.5rem;right:0.75rem;font-size:0.65rem;color:var(--muted2);pointer-events:none;z-index:999;letter-spacing:0.05em;">v1.0</div>
+<div style="position:fixed;bottom:0.5rem;right:0.75rem;font-size:0.65rem;color:var(--muted2);pointer-events:none;z-index:999;letter-spacing:0.05em;">v1.1</div>
 
 <script>
 let isThinking = false;
@@ -270,6 +270,7 @@ async function sendMessage() {
   showTyping();
 
   try {
+      console.log('Iniciando chamada ao Worker...');
     const res = await fetch('https://playlist-ai-proxy.kicaio97.workers.dev/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -284,14 +285,18 @@ Gere entre 15 e 25 músicas reais que existam no Spotify. Use nomes exatos de m�
     });
 
     const data = await res.json();
+      console.log('Resposta do Worker:', JSON.stringify(data));
     const raw = (data.content?.[0]?.text || '{}').replace(/```json|```/g, '').trim();
     let pl;
-    try { pl = JSON.parse(raw); } catch { throw new Error('parse'); }
+    try {
+      console.log('Iniciando chamada ao Worker...'); pl = JSON.parse(raw); } catch(err) {
+      console.error('Erro capturado:', err); throw new Error('parse'); }
 
     hideTyping();
     addAgentMsg(pl.message, pl);
 
-  } catch {
+  } catch(err) {
+      console.error('Erro capturado:', err);
     hideTyping();
     addAgentMsg('Ops, algo deu errado. Tente novamente com outra descrição!');
   }
