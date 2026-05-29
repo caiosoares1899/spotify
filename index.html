@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PlaylistAI">
+<meta name="theme-color" content="#0a0a0a">
+<title>PlaylistAI — Crie playlists com IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1e1e1e;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --green: #1DB954;
+    --green-dim: rgba(29,185,84,0.12);
+    --green-glow: rgba(29,185,84,0.3);
+    --text: #f5f5f5;
+    --muted: #888;
+    --muted2: #555;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+  .screen { display: none; flex-direction: column; min-height: 100vh; position: relative; z-index: 1; }
+  .screen.active { display: flex; }
+
+  /* SETUP */
+  .setup-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem 1.5rem; }
+  .logo-mark { width: 72px; height: 72px; border-radius: 20px; background: var(--green); display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; box-shadow: 0 0 40px var(--green-glow); animation: pulse-logo 3s ease-in-out infinite; }
+  @keyframes pulse-logo { 0%,100%{box-shadow:0 0 40px var(--green-glow)}50%{box-shadow:0 0 70px var(--green-glow),0 0 120px rgba(29,185,84,0.15)}}
+  .logo-mark svg { width: 36px; height: 36px; }
+  .app-title { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:0.4rem; background:linear-gradient(135deg,#fff 40%,#888); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .app-subtitle { font-size:0.9rem; color:var(--muted); margin-bottom:2.5rem; text-align:center; line-height:1.5; }
+  .setup-card { width:100%; max-width:440px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.75rem; display:flex; flex-direction:column; gap:1rem; }
+  .setup-section-title { font-family:'Syne',sans-serif; font-size:0.7rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--green); margin-bottom:0.25rem; }
+  .field-group { display:flex; flex-direction:column; gap:0.5rem; }
+  label { font-size:0.8rem; color:var(--muted); }
+  input[type="text"],input[type="password"] { width:100%; padding:0.75rem 1rem; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.9rem; outline:none; transition:border-color 0.2s; }
+  input:focus { border-color:var(--green); }
+  .hint { font-size:0.75rem; color:var(--muted2); line-height:1.5; }
+  .hint a { color:var(--green); text-decoration:none; }
+  .hint code { color:var(--green); }
+  .divider { height:1px; background:var(--border); }
+  .spotify-connect-btn { display:flex; align-items:center; gap:10px; background:var(--green); color:#000; font-family:'Syne',sans-serif; font-size:0.9rem; font-weight:700; border:none; border-radius:var(--radius-sm); padding:0.85rem 1.25rem; cursor:pointer; width:100%; justify-content:center; transition:all 0.2s; }
+  .spotify-connect-btn:hover { background:#1ed760; transform:translateY(-1px); }
+  .step-badge { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:rgba(0,0,0,0.2); font-size:0.72rem; font-weight:700; flex-shrink:0; }
+
+  /* HEADER */
+  .app-header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(10,10,10,0.9); backdrop-filter:blur(12px); z-index:10; }
+  .header-logo { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:800; letter-spacing:-0.02em; display:flex; align-items:center; gap:8px; }
+  .header-logo span { color:var(--green); }
+  .user-pill { display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:4px 12px 4px 4px; font-size:0.78rem; color:var(--muted); }
+  .user-avatar { width:26px; height:26px; border-radius:50%; background:var(--green); display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; color:#000; }
+
+  /* BODY */
+  .app-body { flex:1; padding:1.25rem; display:flex; flex-direction:column; gap:1rem; max-width:640px; margin:0 auto; width:100%; }
+  .chat-area { flex:1; display:flex; flex-direction:column; gap:0.75rem; min-height:300px; padding-bottom:0.5rem; }
+
+  .msg { display:flex; gap:10px; animation:fadeUp 0.3s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
+  .msg.user { flex-direction:row-reverse; }
+  .msg-avatar { width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; }
+  .msg.agent .msg-avatar { background:var(--green); color:#000; }
+  .msg.user .msg-avatar { background:var(--surface2); color:var(--muted); border:1px solid var(--border2); }
+  .msg-bubble { max-width:82%; padding:0.75rem 1rem; border-radius:16px; font-size:0.88rem; line-height:1.6; }
+  .msg.agent .msg-bubble { background:var(--surface); border:1px solid var(--border); border-bottom-left-radius:4px; color:var(--text); }
+  .msg.user .msg-bubble { background:var(--green-dim); border:1px solid rgba(29,185,84,0.25); border-bottom-right-radius:4px; color:var(--text); }
+  .msg-bubble strong { color:var(--green); font-weight:500; }
+
+  /* PLAYLIST CARD */
+  .playlist-card { background:var(--surface2); border:1px solid var(--border2); border-radius:var(--radius-sm); margin-top:0.75rem; overflow:hidden; }
+  .playlist-card-header { padding:0.75rem 1rem; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); }
+  .playlist-card-title { font-family:'Syne',sans-serif; font-size:0.85rem; font-weight:700; }
+  .track-count { font-size:0.75rem; color:var(--muted); }
+  .playlist-track-list { max-height:200px; overflow-y:auto; }
+  .playlist-track-list::-webkit-scrollbar { width:4px; }
+  .playlist-track-list::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+  .pl-track { display:flex; align-items:center; gap:10px; padding:0.5rem 1rem; border-bottom:1px solid var(--border); font-size:0.8rem; }
+  .pl-track:last-child { border-bottom:none; }
+  .pl-num { color:var(--muted2); min-width:20px; font-size:0.75rem; }
+  .pl-name { flex:1; color:var(--text); }
+  .pl-artist { color:var(--muted); font-size:0.75rem; }
+  .btn-create-playlist { width:100%; padding:0.65rem; background:var(--green); color:#000; font-family:'Syne',sans-serif; font-size:0.8rem; font-weight:700; border:none; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .btn-create-playlist:hover { background:#1ed760; }
+  .btn-create-playlist:disabled { opacity:0.5; cursor:not-allowed; }
+
+  /* TYPING */
+  .typing-dots { display:flex; gap:4px; padding:4px 0; }
+  .typing-dots span { width:6px; height:6px; border-radius:50%; background:var(--muted); animation:dot 1.2s ease-in-out infinite; }
+  .typing-dots span:nth-child(2){animation-delay:0.2s}.typing-dots span:nth-child(3){animation-delay:0.4s}
+  @keyframes dot{0%,80%,100%{transform:scale(0.7);opacity:0.4}40%{transform:scale(1);opacity:1}}
+
+  /* INPUT BAR */
+  .input-bar { display:flex; gap:8px; align-items:flex-end; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:0.6rem 0.75rem; transition:border-color 0.2s; }
+  .input-bar:focus-within { border-color:var(--green); }
+  .input-bar textarea { flex:1; background:transparent; border:none; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.9rem; resize:none; min-height:22px; max-height:120px; line-height:1.5; outline:none; padding:0; }
+  .send-btn { width:36px; height:36px; border-radius:50%; background:var(--green); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.2s; }
+  .send-btn:hover { background:#1ed760; transform:scale(1.05); }
+  .send-btn:disabled { opacity:0.3; cursor:not-allowed; transform:none; }
+  .send-btn svg { width:16px; height:16px; }
+
+  /* SUGGESTIONS */
+  .suggestions { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:0.25rem; }
+  .sug-btn { font-size:0.78rem; padding:0.4rem 0.85rem; background:var(--surface); border:1px solid var(--border); border-radius:999px; color:var(--muted); cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+  .sug-btn:hover { border-color:var(--green); color:var(--green); background:var(--green-dim); }
+
+  /* TOAST */
+  .toast { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%) translateY(80px); background:var(--surface2); border:1px solid var(--border2); border-radius:999px; padding:0.65rem 1.25rem; font-size:0.85rem; color:var(--text); transition:transform 0.3s ease; z-index:100; white-space:nowrap; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+  .toast.success { border-color:var(--green); color:var(--green); }
+  .toast.error { border-color:#e05; color:#e05; }
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div class="screen active" id="screen-setup">
+  <div class="setup-wrap">
+    <div class="logo-mark">
+      <svg viewBox="0 0 36 36" fill="none">
+        <circle cx="18" cy="18" r="12" fill="rgba(0,0,0,0.2)"/>
+        <circle cx="18" cy="18" r="3" fill="#000"/>
+        <path d="M12 14c1.5-1.5 3.5-2.5 6-2.5s4.5 1 6 2.5" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+        <path d="M9 11c2.5-2.5 5.5-4 9-4s6.5 1.5 9 4" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1 class="app-title">PlaylistAI</h1>
+    <p class="app-subtitle">Descreva o que você quer ouvir.<br>A IA cria a playlist direto no seu Spotify.</p>
+
+    <div class="setup-card">
+      <div class="setup-section-title">Credenciais do Spotify</div>
+
+      <div class="field-group">
+        <label>Client ID</label>
+        <input type="text" id="clientId" placeholder="Cole seu Client ID aqui">
+      </div>
+      <div class="field-group">
+        <label>Client Secret</label>
+        <input type="password" id="clientSecret" placeholder="Cole seu Client Secret aqui">
+      </div>
+      <p class="hint">
+        Crie um app gratuito em <a href="https://developer.spotify.com/dashboard" target="_blank">developer.spotify.com/dashboard</a>.<br>
+        No painel do app, adicione <code>https://SEU_DOMINIO/</code> como Redirect URI.
+      </p>
+
+      <div class="divider"></div>
+
+      <button class="spotify-connect-btn" onclick="startOAuth()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+        Conectar com Spotify
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="screen" id="screen-app">
+  <header class="app-header">
+    <div class="header-logo">Playlist<span>AI</span></div>
+    <div class="user-pill">
+      <div class="user-avatar" id="user-initials">?</div>
+      <span id="user-name">Conectando...</span>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <div class="chat-area" id="chat-area"></div>
+
+    <div class="suggestions" id="suggestions">
+      <button class="sug-btn" onclick="useSuggestion(this)">MPB anos 70 com Djavan e Gil</button>
+      <button class="sug-btn" onclick="useSuggestion(this)">Forró pé de serra clássico</button>
+      <button class="sug-btn" onclick="useSuggestion(this)">Soul brasileiro dos anos 70</button>
+      <button class="sug-btn" onclick="useSuggestion(this)">Tropicalismo essencial</button>
+      <button class="sug-btn" onclick="useSuggestion(this)">Jazz brasileiro relaxante</button>
+    </div>
+
+    <div class="input-bar">
+      <textarea id="user-input" placeholder="Descreva sua playlist... ex: rock dos anos 90 pra treinar" rows="1"
+        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="send-btn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let spotifyToken = null;
+let spotifyUser = null;
+let pendingTracks = {};
+let isThinking = false;
+
+// ── OAuth ──
+function startOAuth() {
+  const clientId = document.getElementById("clientId").value.trim();
+  const clientSecret = document.getElementById("clientSecret").value.trim();
+  if (!clientId) { showToast("Cole seu Client ID primeiro", "error"); return; }
+  localStorage.setItem("sp_cid", clientId);
+  localStorage.setItem("sp_cs", clientSecret);
+  const redirectUri = encodeURIComponent(location.origin + location.pathname);
+  const scopes = encodeURIComponent("playlist-modify-public playlist-modify-private user-read-private user-read-email");
+  const state = Math.random().toString(36).slice(2);
+  localStorage.setItem("oauth_state", state);
+  location.href = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scopes}&state=${state}`;
+}
+
+async function handleCallback() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get("code");
+  if (!code) return false;
+  const clientId = localStorage.getItem("sp_cid");
+  const clientSecret = localStorage.getItem("sp_cs");
+  const redirectUri = location.origin + location.pathname;
+  try {
+    const res = await fetch("https://accounts.spotify.com/api/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "Authorization": "Basic " + btoa(clientId + ":" + clientSecret) },
+      body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirectUri })
+    });
+    const data = await res.json();
+    if (!data.access_token) throw new Error();
+    spotifyToken = data.access_token;
+    localStorage.setItem("sp_token", spotifyToken);
+    history.replaceState({}, "", location.pathname);
+    return true;
+  } catch { showToast("Erro ao autenticar", "error"); return false; }
+}
+
+async function loadUser() {
+  const res = await fetch("https://api.spotify.com/v1/me", { headers: { Authorization: "Bearer " + spotifyToken }});
+  spotifyUser = await res.json();
+  const name = spotifyUser.display_name || "Usuário";
+  document.getElementById("user-name").textContent = name;
+  document.getElementById("user-initials").textContent = name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
+}
+
+async function testToken() {
+  try { const r = await fetch("https://api.spotify.com/v1/me", { headers: { Authorization: "Bearer " + spotifyToken }}); return r.ok; }
+  catch { return false; }
+}
+
+async function init() {
+  if (location.search.includes("code=")) {
+    if (await handleCallback()) { await bootApp(); return; }
+  }
+  const saved = localStorage.getItem("sp_token");
+  if (saved) {
+    spotifyToken = saved;
+    if (await testToken()) { await bootApp(); return; }
+  }
+  const cid = localStorage.getItem("sp_cid");
+  if (cid) document.getElementById("clientId").value = cid;
+  showScreen("screen-setup");
+}
+
+async function bootApp() {
+  showScreen("screen-app");
+  await loadUser();
+  addAgentMsg("Olá! 🎵 Conectado ao Spotify. Me descreva a playlist dos seus sonhos — gênero, época, clima, artistas — e eu crio pra você em segundos!");
+}
+
+// ── Screens ──
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+// ── Chat ──
+function addAgentMsg(text, playlist = null) {
+  const area = document.getElementById("chat-area");
+  const div = document.createElement("div");
+  div.className = "msg agent";
+  div.innerHTML = `<div class="msg-avatar">AI</div><div class="msg-bubble">${text}${playlist ? buildCard(playlist) : ""}</div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function addUserMsg(text) {
+  const area = document.getElementById("chat-area");
+  const div = document.createElement("div");
+  div.className = "msg user";
+  div.innerHTML = `<div class="msg-avatar">Eu</div><div class="msg-bubble">${text}</div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  document.getElementById("suggestions").style.display = "none";
+}
+
+function showTyping() {
+  const area = document.getElementById("chat-area");
+  const div = document.createElement("div");
+  div.className = "msg agent"; div.id = "typing";
+  div.innerHTML = `<div class="msg-avatar">AI</div><div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+function hideTyping() { document.getElementById("typing")?.remove(); }
+
+function buildCard(pl) {
+  const items = pl.tracks.slice(0,8).map((t,i) => `<div class="pl-track"><span class="pl-num">${i+1}</span><span class="pl-name">${t.name}</span><span class="pl-artist">${t.artist}</span></div>`).join("")
+    + (pl.tracks.length > 8 ? `<div class="pl-track"><span class="pl-num">+${pl.tracks.length-8}</span><span class="pl-name" style="color:var(--muted)">mais músicas</span></div>` : "");
+  return `<div class="playlist-card" id="pc-${pl.id}">
+    <div class="playlist-card-header"><span class="playlist-card-title">${pl.name}</span><span class="track-count">${pl.tracks.length} músicas</span></div>
+    <div class="playlist-track-list">${items}</div>
+    <button class="btn-create-playlist" onclick="createPlaylist('${pl.id}')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+      Criar no Spotify
+    </button>
+  </div>`;
+}
+
+// ── Claude API ──
+async function sendMessage() {
+  if (isThinking) return;
+  const input = document.getElementById("user-input");
+  const text = input.value.trim();
+  if (!text) return;
+  addUserMsg(text);
+  input.value = ""; input.style.height = "auto";
+  isThinking = true;
+  document.getElementById("send-btn").disabled = true;
+  showTyping();
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: `Você é um especialista em música. Responda SOMENTE com JSON válido, sem texto extra, sem markdown, sem backticks. Formato exato:
+{"id":"pl_XXXX","name":"<nome criativo em português>","message":"<1-2 frases animadas sobre a playlist>","tracks":[{"name":"<título exato>","artist":"<artista exato>"}]}
+Gere 15 a 20 músicas reais do Spotify. Nomes exatos para facilitar busca.`,
+        messages: [{ role: "user", content: text }]
+      })
+    });
+    const data = await res.json();
+    const raw = (data.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim();
+    let pl;
+    try { pl = JSON.parse(raw); } catch { throw new Error("parse"); }
+    pendingTracks[pl.id] = pl.tracks;
+    hideTyping();
+    addAgentMsg(pl.message, pl);
+  } catch {
+    hideTyping();
+    addAgentMsg("Ops, algo deu errado. Tente novamente com outra descrição!");
+  }
+  isThinking = false;
+  document.getElementById("send-btn").disabled = false;
+}
+
+// ── Spotify: criar playlist ──
+async function createPlaylist(plId) {
+  const btn = document.querySelector(`#pc-${plId} .btn-create-playlist`);
+  const tracks = pendingTracks[plId];
+  if (!tracks || !btn) return;
+  btn.disabled = true;
+  btn.textContent = "Buscando músicas...";
+
+  try {
+    const uris = [];
+    for (const t of tracks.slice(0, 20)) {
+      const q = encodeURIComponent(`track:${t.name} artist:${t.artist}`);
+      const r = await fetch(`https://api.spotify.com/v1/search?q=${q}&type=track&limit=1`, { headers: { Authorization: "Bearer " + spotifyToken }});
+      const d = await r.json();
+      const uri = d.tracks?.items?.[0]?.uri;
+      if (uri) uris.push(uri);
+    }
+    if (!uris.length) throw new Error("sem uris");
+
+    btn.textContent = "Criando playlist...";
+    const title = document.querySelector(`#pc-${plId} .playlist-card-title`).textContent;
+    const plRes = await fetch(`https://api.spotify.com/v1/users/${spotifyUser.id}/playlists`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + spotifyToken, "Content-Type": "application/json" },
+      body: JSON.stringify({ name: title, description: "Criada com PlaylistAI 🎵", public: false })
+    });
+    const newPl = await plRes.json();
+
+    await fetch(`https://api.spotify.com/v1/playlists/${newPl.id}/tracks`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + spotifyToken, "Content-Type": "application/json" },
+      body: JSON.stringify({ uris })
+    });
+
+    btn.innerHTML = `✓ Criada com ${uris.length} músicas!`;
+    btn.style.background = "#fff";
+    showToast(`"${title}" criada no Spotify!`, "success");
+    addAgentMsg(`Playlist <strong>${title}</strong> criada com sucesso com ${uris.length} músicas! 🎉 Abre o Spotify e aproveita!`);
+  } catch {
+    btn.disabled = false;
+    btn.textContent = "Tentar novamente";
+    showToast("Erro ao criar. Token expirado?", "error");
+  }
+}
+
+// ── Utils ──
+function showToast(msg, type = "") {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove("show"), 3500);
+}
+function handleKey(e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el) { el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 120) + "px"; }
+function useSuggestion(btn) { document.getElementById("user-input").value = btn.textContent; sendMessage(); }
+
+init();
+</script>
+</body>
+</html>
